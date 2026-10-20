@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CCR Sports Academy - Attendance</title>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; text-align: center; }
+    .header-box { background: linear-gradient(90deg, #0284c7, #1e3a8a); padding: 12px; border-radius: 12px; max-width: 460px; margin: 0 auto 8px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+    h2 { margin: 0; color: #ffffff; font-size: 21px; letter-spacing: 0.5px; }
+    .sub-title { color: #bae6fd; font-size: 13px; margin-top: 3px; font-weight: bold; }
+    .shift-banner { display: inline-block; background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 13px; padding: 4px 12px; border-radius: 20px; margin-top: 6px; }
+    .status-bar { background: #1e293b; color: #fbbf24; padding: 10px; border-radius: 10px; margin: 8px auto; max-width: 460px; font-weight: bold; font-size: 14px; border: 1px solid #334155; }
+    .nav-tabs { display: flex; justify-content: center; gap: 6px; max-width: 460px; margin: 8px auto; }
+    .tab-btn { flex: 1; padding: 11px 6px; border: none; border-radius: 8px; background: #334155; color: #cbd5e1; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .tab-btn.active { background: #0284c7; color: #fff; }
+    .camera-box { position: relative; max-width: 420px; margin: 0 auto; border: 3px solid #38bdf8; border-radius: 14px; overflow: hidden; background: #000; }
+    video { width: 100%; height: auto; display: block; }
+    video.front-cam { transform: scaleX(-1); }
+    .panel { display: none; background: #1e293b; padding: 14px; border-radius: 12px; max-width: 460px; margin: 10px auto; text-align: left; border: 1px solid #334155; }
+    .panel.active { display: block; }
+    input, select { width: 100%; padding: 11px; margin: 6px 0 12px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; }
+    .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-red { background: #dc2626; color: #fff; margin-top: 12px; }
+    .badge { display: inline-block; background: #065f46; color: #a7f3d0; padding: 5px 10px; border-radius: 6px; margin: 3px; font-size: 13px; font-weight: bold; }
+    .record-card { display: flex; align-items: center; gap: 10px; background: #0f172a; padding: 8px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #334155; }
+    .record-card img { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; }
+    .record-info { flex: 1; font-size: 13px; }
+    .record-info strong { color: #38bdf8; font-size: 15px; display: block; }
+    .student-row { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="header-box">
+    <h2>🏆 CCR SPORTS ACADEMY</h2>
+    <div class="sub-title">Smart Face Recognition Attendance</div>
+    <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
+  </div>
+  <div id="status" class="status-bar">Loading AI Face Model... Please wait</div>
+  <div class="nav-tabs">
+    <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Auto Hajiri</button>
+    <button id="t2" class="tab-btn" onclick="showTab('reg')">➕ Add Player</button>
+    <button id="t3" class="tab-btn" onclick="showTab('rep')">📋 Report (<span id="topCount">0</span>)</button>
+  </div>
+
+  <div id="camContainer" class="camera-box">
+    <video id="video" autoplay muted playsinline class="front-cam"></video>
+  </div>
+  
+  <div style="max-width:420px; margin:6px auto;">
+    <button onclick="switchCamera()" style="background:#334155; color:#38bdf8; border:1px solid #475569; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; width:100%;">
+      🔄 Switch Camera (Front / Back)
+    </button>
+  </div>
+
+  <div id="p-att" class="panel active">
+    <div style="text-align:center; color:#94a3b8; font-size:13px; margin-bottom:8px;">
+      Subah (12 PM tak) aur Sham (12 PM ke baad) dono time alag-alag hajiri lagegi.
+    </div>
+    <details style="margin-bottom:10px;">
+      <summary style="color:#38bdf8; cursor:pointer; font-size:14px; font-weight:bold;">👉 Manual Attendance (Select Name)</summary>
+      <div style="margin-top:8px;">
+        <select id="manualSelect"><option value="">-- Select Player Name --</option></select>
+        <button class="btn-action btn-green" onclick="markManual()">📸 Take Selfie &amp; Mark Present</button>
+      </div>
+    </details>
+    <div style="border-top:1px solid #334155; padding-top:8px;">
+      <small id="currentShiftLabel" style="color:#94a3b8;">Current Shift Present Players:</small>
+      <div id="todayBadges" style="margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div id="p-reg" class="panel">
+    <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">Register New Player Face</h3>
+    <label style="font-size:13px;">Player Full Name:</label>
+    <input type="text" id="sName" placeholder="Ex: Aman Kumar">
+    <label style="font-size:13px;">Game / Batch / Age Group:</label>
+    <input type="text" id="sBatch" placeholder="Ex: Volleyball U-14">
+    <button class="btn-action btn-green" onclick="registerFace()">📷 Scan Face &amp; Save Player</button>
+    <div style="margin-top:16px; border-top:1px solid #334155; padding-top:10px;">
+      <small style="color:#94a3b8;">Total Registered Players (<span id="totalStudents">0</span>):</small>
+      <div id="studentList" style="margin-top:8px; max-height:180px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div id="p-rep" class="panel">
+    <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">📊 CCR Attendance &amp; Photo Report</h3>
+    
+    <label style="font-size:13px; color:#cbd5e1;">Filter Report By Shift / Date:</label>
+    <select id="dateFilter" onchange="refreshUI()">
+      <option value="TODAY_CURRENT">Today - Current Shift Only</option>
+      <option value="TODAY_MORNING">Today - Morning Shift (Before 12 PM)</option>
+      <option value="TODAY_EVENING">Today - Evening Shift (After 12 PM)</option>
+      <option value="TODAY_ALL">Today - Both Shifts (Morning + Evening)</option>
+      <option value="ALL">All Dates Record</option>
+    </select>
+
+    <button class="btn-action btn-green" onclick="downloadPhotosPDF()">📄 Download All Photos PDF</button>
+    <button class="btn-action btn-blue" onclick="exportCSV()">📥 Download Excel (CSV) List</button>
+
+    <div id="logsContainer" style="margin-top:12px; max-height:320px; overflow-y:auto;"></div>
+    <button class="btn-action btn-red" onclick="clearLogs()">🗑️ Clear Old Attendance Logs</button>
+  </div>
+
+  <div id="pdfWrapper" style="display:none; background:#ffffff; color:#000000; padding:15px; width:750px; margin:0 auto;">
+    <div style="text-align:center; border-bottom:2px solid #0284c7; padding-bottom:10px; margin-bottom:12px;">
+      <h2 style="margin:0; color:#0284c7; font-size:24px;">CCR SPORTS ACADEMY</h2>
+      <p id="pdfSubTitle" style="margin:4px 0 0 0; font-size:14px; color:#334155; font-weight:bold;"></p>
+    </div>
+    <div id="pdfGrid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;"></div>
+  </div>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+<script>
+  const ACADEMY_NAME = "CCR SPORTS ACADEMY";
+  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+  let students = JSON.parse(localStorage.getItem('ccr_students') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_logs') || '[]');
+  let faceMatcher = null;
+  let isBusy = false;
+  let activeTab = 'att';
+  let useFrontCamera = true;
+  let currentStream = null;
+
+  const video = document.getElementById('video');
+  const statusEl = document.getElementById('status');
+
+  function getTodayDate() {
+    const d = new Date();
+    return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+  }
+
+  function getCurrentShift() {
+    const hr = new Date().getHours();
+    return hr < 12 ? 'Morning' : 'Evening';
+  }
+
+  function getLogShift(log) {
+    if (log.shift) return log.shift;
+    if (log.time && log.time.toLowerCase().includes('am')) return 'Morning';
+    if (log.time && log.time.toLowerCase().includes('pm')) return 'Evening';
+    return 'Morning';
+  }
+
+  function updateShiftBanner() {
+    const s = getCurrentShift();
+    const banner = document.getElementById('shiftBanner');
+    if (s === 'Morning') {
+      banner.innerHTML = "🌅 Active Shift: MORNING (Valid till 12:00 PM)";
+      banner.style.background = "#38bdf8";
+    } else {
+      banner.innerHTML = "🌆 Active Shift: EVENING (Valid till 12:00 AM)";
+      banner.style.background = "#f59e0b";
+    }
+    document.getElementById('currentShiftLabel').innerText = "Today's " + s + " Shift Present Players:";
+  }
+
+  async function init() {
+    updateShiftBanner();
+    setInterval(updateShiftBanner, 30000);
+    try {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      await startCamera();
+      rebuildMatcher();
+      refreshUI();
+      statusEl.innerText = students.length === 0 ? "Step 1: Go to '+ Add Player' to register players first." : "System Ready! Look at the camera to mark attendance.";
+      startScanning();
+    } catch (e) {
+      statusEl.innerText = "Camera Error: Please Allow Camera Permission.";
+    }
+  }
+
+  async function startCamera() {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+    const constraints = {
+      video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+      audio: false
+    };
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+    if (useFrontCamera) {
+      video.classList.add('front-cam');
+    } else {
+      video.classList.remove('front-cam');
+    }
+  }
+
+  async function switchCamera() {
+    useFrontCamera = !useFrontCamera;
+    statusEl.innerText = "Switching camera...";
+    try {
+      await startCamera();
+      statusEl.innerText = useFrontCamera ? "Switched to Front Camera" : "Switched to Back Camera";
+    } catch (err) {
+      statusEl.innerText = "Could not switch camera.";
+    }
+  }
+
+  function rebuildMatcher() {
+    if (students.length === 0) { faceMatcher = null; return; }
+    const labeled = students.map(s => new faceapi.LabeledFaceDescriptors(s.name, [new Float32Array(s.descriptor)]));
+    faceMatcher = new faceapi.FaceMatcher(labeled, 0.48);
+  }
+
+  function startScanning() {
+    setInterval(async () => {
+      if (activeTab !== 'att' || isBusy || !faceMatcher) return;
+      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      if (!det) return;
+      const match = faceMatcher.findBestMatch(det.descriptor);
+      if (match.label !== 'unknown') {
+        const stu = students.find(s => s.name === match.label);
+        if (stu) saveAttendance(stu.name, stu.batch);
+      } else {
+        statusEl.innerText = "Face not matched. Please look straight at camera...";
+      }
+    }, 1100);
+  }
+
+  function takeStampedSelfie(name, batch, shift) {
+    const canvas = document.getElementById('canvas');
+    canvas.width = 480; canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    
+    if (useFrontCamera) {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
+
+    const now = new Date().toLocaleString('en-IN');
+    ctx.fillStyle = "rgba(15, 23, 42, 0.84)";
+    ctx.fillRect(0, canvas.height - 78, canvas.width, 78);
+    ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px sans-serif";
+    ctx.fillText(ACADEMY_NAME + " [" + shift.toUpperCase() + "]", 12, canvas.height - 55);
+    ctx.fillStyle = "#38bdf8"; ctx.font = "bold 17px sans-serif";
+    ctx.fillText(name + " (" + batch + ")", 12, canvas.height - 32);
+    ctx.fillStyle = "#ffffff"; ctx.font = "13px sans-serif";
+    ctx.fillText("Date & Time: " + now, 12, canvas.height - 10);
+    return canvas.toDataURL('image/jpeg', 0.68);
+  }
+
+  function saveAttendance(name, batch) {
+    const today = getTodayDate();
+    const currentShift = getCurrentShift();
+
+    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) {
+      statusEl.innerText = name + " - " + currentShift + " Attendance Already Marked!";
+      return;
+    }
+
+    isBusy = true;
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const photo = takeStampedSelfie(name, batch, currentShift);
+    logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
+    if (logs.length > 450) logs.pop();
+    localStorage.setItem('ccr_logs', JSON.stringify(logs));
+    refreshUI();
+
+    const hindiShift = currentShift === 'Morning' ? 'subah ki' : 'sham ki';
+    statusEl.innerText = "PRESENT (" + currentShift + "): " + name + " (" + timeStr + ")";
+    speak(name + ", aapki " + hindiShift + " hajiri lag gayi hai");
+    setTimeout(() => { isBusy = false; statusEl.innerText = "Ready for next player..."; }, 2200);
+  }
+
+  async function registerFace() {
+    const name = document.getElementById('sName').value.trim();
+    const batch = document.getElementById('sBatch').value.trim() || 'Volleyball';
+    if (!name) { alert("Please enter player name!"); return; }
+    statusEl.innerText = "Scanning face... Look straight at the camera.";
+    const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+    if (!det) {
+      alert("Face not clear! Stand in good light and look straight at camera.");
+      statusEl.innerText = "Face scan failed. Try again.";
+      return;
+    }
+    students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
+    students.push({ name: name, batch: batch, descriptor: Array.from(det.descriptor) });
+    localStorage.setItem('ccr_students', JSON.stringify(students));
+    rebuildMatcher(); refreshUI();
+    document.getElementById('sName').value = '';
+    statusEl.innerText = "Registered Successfully: " + name + "!";
+    speak(name + " ka registration pura hua");
+    showTab('att');
+  }
+
+  function markManual() {
+    const name = document.getElementById('manualSelect').value;
+    if (!name) return;
+    const stu = students.find(s => s.name === name);
+    if (stu) saveAttendance(stu.name, stu.batch);
+  }
+
+  function deleteStudent(idx) {
+    if (confirm("Delete this player?")) {
+      students.splice(idx, 1);
+      localStorage.setItem('ccr_students', JSON.stringify(students));
+      rebuildMatcher(); refreshUI();
+    }
+  }
+
+  function getFilteredLogs() {
+    const filter = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : 'TODAY_CURRENT';
+    const today = getTodayDate();
+    const curShift = getCurrentShift();
+
+    if (filter === 'TODAY_CURRENT') return logs.filter(l => l.date === today && getLogShift(l) === curShift);
+    if (filter === 'TODAY_MORNING') return logs.filter(l => l.date === today && getLogShift(l) === 'Morning');
+    if (filter === 'TODAY_EVENING') return logs.filter(l => l.date === today && getLogShift(l) === 'Evening');
+    if (filter === 'TODAY_ALL') return logs.filter(l => l.date === today);
+    return logs;
+  }
+
+  function refreshUI() {
+    updateShiftBanner();
+    const today = getTodayDate();
+    const curShift = getCurrentShift();
+    const currentShiftLogs = logs.filter(l => l.date === today && getLogShift(l) === curShift);
+    document.getElementById('topCount').innerText = currentShiftLogs.length;
+
+    document.getElementById('todayBadges').innerHTML = currentShiftLogs.length === 0 
+      ? '<span style="color:#64748b;font-size:13px;">No attendance marked in ' + curShift + ' shift yet</span>'
+      : currentShiftLogs.map(l => '<span class="badge">✔ '+l.name+' ('+l.time+')</span>').join('');
+
+    document.getElementById('manualSelect').innerHTML = '<option value="">-- Select Player Name --</option>' +
+      students.map(s => '<option value="'+s.name+'">'+s.name+' ('+s.batch+')</option>').join('');
+
+    document.getElementById('totalStudents').innerText = students.length;
+    document.getElementById('studentList').innerHTML = students.map((s, i) => 
+      '<div class="student-row"><span>👤 <b>'+s.name+'</b> <small style="color:#94a3b8;">('+s.batch+')</small></span><button onclick="deleteStudent('+i+')" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">Delete</button></div>'
+    ).join('');
+
+    const showLogs = getFilteredLogs();
+    document.getElementById('logsContainer').innerHTML = showLogs.length === 0
+      ? '<div style="color:#94a3b8;text-align:center;padding:15px;">No records found for selected shift/date.</div>'
+      : showLogs.map(l => {
+          const sh = getLogShift(l);
+          return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
+        }).join('');
+  }
+
+  function downloadPhotosPDF() {
+    const list = getFilteredLogs();
+    if (list.length === 0) {
+      alert("No attendance photos found for selected filter!");
+      return;
+    }
+
+    statusEl.innerText = "Creating PDF with all photos... Please wait 3 seconds.";
+    const filterSelect = document.getElementById('dateFilter');
+    const filterText = filterSelect.options[filterSelect.selectedIndex].text;
+    const titleDate = getTodayDate();
+
+    document.getElementById('pdfSubTitle').innerText = filterText + " | Date: " + titleDate + " | Total Present: " + list.length;
+
+    const grid = document.getElementById('pdfGrid');
+    grid.innerHTML = list.map((l, idx) => {
+      const sh = getLogShift(l);
+      return `
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:6px; text-align:center; background:#f8fafc; page-break-inside:avoid;">
+        <img src="${l.photo}" style="width:100%; height:145px; object-fit:cover; border-radius:6px; border:1px solid #0284c7;">
+        <div style="font-weight:bold; font-size:13px; color:#0f172a; margin-top:4px;">${idx + 1}. ${l.name}</div>
+        <div style="font-size:11px; color:#334155;">Batch: ${l.batch} (${sh})</div>
+        <div style="font-size:11px; color:#0284c7; font-weight:bold;">${l.date} | ${l.time}</div>
+      </div>
+    `}).join('');
+
+    const wrapper = document.getElementById('pdfWrapper');
+    wrapper.style.display = 'block';
+
+    const opt = {
+      margin: 8,
+      filename: 'CCR_Academy_' + titleDate + '_' + getCurrentShift() + '.pdf',
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(wrapper).save().then(() => {
+      wrapper.style.display = 'none';
+      statusEl.innerText = "PDF Downloaded Successfully!";
+    });
+  }
+
+  function exportCSV() {
+    const list = getFilteredLogs();
+    if (list.length === 0) { alert("No attendance records to download yet!"); return; }
+    let csv = "Academy,Date,Shift,Time,Player Name,Sport Batch\n";
+    list.forEach(l => { 
+      const sh = getLogShift(l);
+      csv += '"'+ACADEMY_NAME+'","'+l.date+'","'+sh+'","'+l.time+'","'+l.name+'","'+l.batch+'"\n'; 
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'CCR_Attendance_'+getTodayDate()+'_'+getCurrentShift()+'.csv';
+    link.click();
+  }
+
+  function clearLogs() {
+    if (confirm("Are you sure you want to clear old attendance records?")) {
+      logs = []; localStorage.setItem('ccr_logs', '[]'); refreshUI();
+    }
+  }
+
+  function showTab(t) {
+    activeTab = t;
+    document.getElementById('t1').classList.toggle('active', t === 'att');
+    document.getElementById('t2').classList.toggle('active', t === 'reg');
+    document.getElementById('t3').classList.toggle('active', t === 'rep');
+    document.getElementById('p-att').classList.toggle('active', t === 'att');
+    document.getElementById('p-reg').classList.toggle('active', t === 'reg');
+    document.getElementById('p-rep').classList.toggle('active', t === 'rep');
+    document.getElementById('camContainer').style.display = (t === 'rep') ? 'none' : 'block';
+  }
+
+  function speak(txt) {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'hi-IN'; window.speechSynthesis.speak(u);
+    }
+  }
+  window.onload = init;
+</script>
+</body>
+</html>
