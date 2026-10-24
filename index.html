@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CCR Sports Academy - Auto AI Attendance</title>
+  <title>CCR Sports Academy - Attendance</title>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -120,10 +120,9 @@
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
   const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfy6cqdjEvgRTPIEtd-bGyZJng1KFqD-1w7Z4hv5tFbbONVwvfsfofQOcm85jLWRk/exec";
 
-  let students = JSON.parse(localStorage.getItem('ccr_students_v5') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_logs_v5') || '[]');
+  let students = JSON.parse(localStorage.getItem('ccr_students_v6') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_logs_v6') || '[]');
   let faceMatcher = null;
   let isBusy = false;
   let activeTab = 'att';
@@ -240,7 +239,7 @@
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
     students.push({ name: name, batch: batch, descriptor: Array.from(det.descriptor) });
-    localStorage.setItem('ccr_students_v5', JSON.stringify(students));
+    localStorage.setItem('ccr_students_v6', JSON.stringify(students));
 
     rebuildMatcher();
     refreshUI();
@@ -273,165 +272,5 @@
     ctx.fillText(ACADEMY_NAME + " [" + shift.toUpperCase() + "]", 12, canvas.height - 60);
     
     ctx.fillStyle = "#38bdf8"; ctx.font = "bold 17px sans-serif";
-    ctx.fillText(name + " (" + batch + ")", 12, canvas.height - 36);
+    ctx
     
-    ctx.fillStyle = "#ffffff"; ctx.font = "13px sans-serif";
-    ctx.fillText("Time: " + now, 12, canvas.height - 12);
-
-    return canvas.toDataURL('image/jpeg', 0.75);
-  }
-
-  function sendToGoogleSheet(date, shift, time, name, batch) {
-    if (!WEB_APP_URL) return;
-    const payload = { date: date, shift: shift, time: time, name: name, batch: batch };
-    fetch(WEB_APP_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(payload)
-    }).catch(err => console.log("Sheet sync error:", err));
-  }
-
-  function saveAttendance(name, batch) {
-    const today = getTodayDate();
-    const currentShift = getCurrentShift();
-
-    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) return;
-
-    isBusy = true;
-    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const photo = takeStampedSelfie(name, batch, currentShift);
-
-    logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
-    if (logs.length > 450) logs.pop();
-    localStorage.setItem('ccr_logs_v5', JSON.stringify(logs));
-
-    // Google Sheet me data bhejein
-    sendToGoogleSheet(today, currentShift, timeStr, name, batch);
-
-    refreshUI();
-    statusEl.innerText = `🎉 PRESENT: ${name} (${timeStr})`;
-    speak(name + ", aapki hajiri lag gayi hai");
-    setTimeout(() => { isBusy = false; }, 2500);
-  }
-
-  function markManual() {
-    const name = document.getElementById('manualSelect').value;
-    if (!name) return;
-    const stu = students.find(s => s.name === name);
-    if (stu) saveAttendance(stu.name, stu.batch);
-  }
-
-  function deleteStudent(idx) {
-    if (confirm("Kya aap is khiladi ko hatana chahte hain?")) {
-      students.splice(idx, 1);
-      localStorage.setItem('ccr_students_v5', JSON.stringify(students));
-      rebuildMatcher();
-      refreshUI();
-    }
-  }
-
-  function getFilteredLogs() {
-    const filter = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : 'TODAY_CURRENT';
-    const today = getTodayDate();
-    const curShift = getCurrentShift();
-
-    if (filter === 'TODAY_CURRENT') return logs.filter(l => l.date === today && getLogShift(l) === curShift);
-    if (filter === 'TODAY_MORNING') return logs.filter(l => l.date === today && getLogShift(l) === 'Morning');
-    if (filter === 'TODAY_EVENING') return logs.filter(l => l.date === today && getLogShift(l) === 'Evening');
-    if (filter === 'TODAY_ALL') return logs.filter(l => l.date === today);
-    return logs;
-  }
-
-  function refreshUI() {
-    updateShiftBanner();
-    const today = getTodayDate();
-    const curShift = getCurrentShift();
-    const currentShiftLogs = logs.filter(l => l.date === today && getLogShift(l) === curShift);
-    document.getElementById('topCount').innerText = currentShiftLogs.length;
-
-    document.getElementById('todayBadges').innerHTML = currentShiftLogs.length === 0 
-      ? '<span style="color:#64748b;font-size:13px;">Aaj is shift mein abhi koi hajiri nahi lagi</span>'
-      : currentShiftLogs.map(l => '<span class="badge">✔ '+l.name+' ('+l.time+')</span>').join('');
-
-    document.getElementById('manualSelect').innerHTML = '<option value="">-- Naam Chunein --</option>' +
-      students.map(s => '<option value="'+s.name+'">'+s.name+' ('+s.batch+')</option>').join('');
-
-    document.getElementById('totalStudents').innerText = students.length;
-    document.getElementById('studentList').innerHTML = students.map((s, i) => 
-      '<div class="student-row"><span>👤 <b>'+s.name+'</b> <small style="color:#94a3b8;">('+s.batch+')</small></span><button onclick="deleteStudent('+i+')" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">Hatae</button></div>'
-    ).join('');
-
-    const showLogs = getFilteredLogs();
-    document.getElementById('logsContainer').innerHTML = showLogs.length === 0
-      ? '<div style="color:#94a3b8;text-align:center;padding:15px;">Koi record nahi mila.</div>'
-      : showLogs.map(l => {
-          const sh = getLogShift(l);
-          return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
-        }).join('');
-  }
-
-  function downloadPhotosPDF() {
-    const list = getFilteredLogs();
-    if (list.length === 0) { alert("PDF banane ke liye koi record nahi hai!"); return; }
-    statusEl.innerText = "PDF ban rahi hai... 3 second rukein.";
-    const filterText = document.getElementById('dateFilter').options[document.getElementById('dateFilter').selectedIndex].text;
-    const titleDate = getTodayDate();
-
-    document.getElementById('pdfSubTitle').innerText = filterText + " | Date: " + titleDate + " | Total Present: " + list.length;
-    document.getElementById('pdfGrid').innerHTML = list.map((l, idx) => `
-      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:6px; text-align:center; background:#f8fafc; page-break-inside:avoid;">
-        <img src="${l.photo}" style="width:100%; height:135px; object-fit:cover; border-radius:6px; border:1px solid #0284c7;">
-        <div style="font-weight:bold; font-size:12px; color:#0f172a; margin-top:3px;">${idx + 1}. ${l.name} (${getLogShift(l)})</div>
-        <div style="font-size:10px; color:#0284c7; font-weight:bold;">${l.date} | ${l.time}</div>
-      </div>
-    `).join('');
-
-    const wrapper = document.getElementById('pdfWrapper');
-    wrapper.style.display = 'block';
-    html2pdf().set({ margin: 8, filename: 'CCR_Academy_' + titleDate + '.pdf', image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(wrapper).save().then(() => {
-      wrapper.style.display = 'none';
-      statusEl.innerText = "✅ PDF Download Successfully!";
-    });
-  }
-
-  function exportCSV() {
-    const list = getFilteredLogs();
-    if (list.length === 0) { alert("Download ke liye koi record nahi hai!"); return; }
-    let csv = "Academy,Date,Shift,Time,Player Name,Sport Batch\n";
-    list.forEach(l => { csv += '"'+ACADEMY_NAME+'","'+l.date+'","'+getLogShift(l)+'","'+l.time+'","'+l.name+'","'+l.batch+'"\n'; });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'CCR_Attendance_'+getTodayDate()+'.csv';
-    link.click();
-  }
-
-  function clearLogs() {
-    if (confirm("Kya aap purana record hatana chahte hain?")) {
-      logs = []; localStorage.setItem('ccr_logs_v5', '[]'); refreshUI();
-    }
-  }
-
-  function showTab(t) {
-    activeTab = t;
-    document.getElementById('t1').classList.toggle('active', t === 'att');
-    document.getElementById('t2').classList.toggle('active', t === 'reg');
-    document.getElementById('t3').classList.toggle('active', t === 'rep');
-    document.getElementById('p-att').classList.toggle('active', t === 'att');
-    document.getElementById('p-reg').classList.toggle('active', t === 'reg');
-    document.getElementById('p-rep').classList.toggle('active', t === 'rep');
-    document.getElementById('camContainer').style.display = (t === 'rep') ? 'none' : 'block';
-  }
-
-  function speak(txt) {
-    if ('speechSynthesis' in window) {
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = 'hi-IN'; window.speechSynthesis.speak(u);
-    }
-  }
-
-  window.onload = init;
-</script>
-</body>
-</html>
