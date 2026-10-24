@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CCR Sports Academy - Attendance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
@@ -13,7 +12,7 @@
     h2 { margin: 0; color: #ffffff; font-size: 21px; letter-spacing: 0.5px; }
     .sub-title { color: #bae6fd; font-size: 13px; margin-top: 3px; font-weight: bold; }
     .shift-banner { display: inline-block; background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 13px; padding: 4px 12px; border-radius: 20px; margin-top: 6px; }
-    .status-bar { background: #1e293b; color: #38bdf8; padding: 10px; border-radius: 10px; margin: 8px auto; max-width: 460px; font-weight: bold; font-size: 14px; border: 1px solid #334155; }
+    .status-bar { background: #1e293b; color: #34d399; padding: 10px; border-radius: 10px; margin: 8px auto; max-width: 460px; font-weight: bold; font-size: 14px; border: 1px solid #334155; }
     .nav-tabs { display: flex; justify-content: center; gap: 6px; max-width: 460px; margin: 8px auto; }
     .tab-btn { flex: 1; padding: 11px 6px; border: none; border-radius: 8px; background: #334155; color: #cbd5e1; font-weight: bold; font-size: 13px; cursor: pointer; }
     .tab-btn.active { background: #0284c7; color: #fff; }
@@ -22,8 +21,8 @@
     video.front-cam { transform: scaleX(-1); }
     .panel { display: none; background: #1e293b; padding: 14px; border-radius: 12px; max-width: 460px; margin: 10px auto; text-align: left; border: 1px solid #334155; }
     .panel.active { display: block; }
-    input, select { width: 100%; padding: 11px; margin: 6px 0 12px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; }
-    .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+    input, select { width: 100%; padding: 12px; margin: 6px 0 12px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; }
+    .btn-action { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 6px; }
     .btn-green { background: #16a34a; color: #fff; }
     .btn-blue { background: #2563eb; color: #fff; }
     .btn-red { background: #dc2626; color: #fff; margin-top: 12px; }
@@ -38,13 +37,13 @@
 <body>
   <div class="header-box">
     <h2>🏆 CCR SPORTS ACADEMY</h2>
-    <div class="sub-title">Auto Face Recognition Attendance</div>
+    <div class="sub-title">Smart Attendance System</div>
     <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
   </div>
-  <div id="status" class="status-bar">⚡ Camera Starting...</div>
+  <div id="status" class="status-bar">⚡ Camera Ready!</div>
 
   <div class="nav-tabs">
-    <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Auto Hajiri</button>
+    <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Hajiri Lagayein</button>
     <button id="t2" class="tab-btn" onclick="showTab('reg')">➕ Naya Khiladi Jodein</button>
     <button id="t3" class="tab-btn" onclick="showTab('rep')">📋 Report (<span id="topCount">0</span>)</button>
   </div>
@@ -59,44 +58,43 @@
     </button>
   </div>
 
+  <!-- 1. Attendance Panel -->
   <div id="p-att" class="panel active">
-    <div style="text-align:center; color:#34d399; font-size:13px; font-weight:bold; margin-bottom:8px;">
-      🤖 Auto AI Mode On: Camera ke samne aate hi hajiri lag jayegi!
-    </div>
-    <details style="margin-bottom:10px;">
-      <summary style="color:#38bdf8; cursor:pointer; font-size:14px; font-weight:bold;">👉 Manual Hajiri (Agar AI na pehchane)</summary>
-      <div style="margin-top:8px;">
-        <select id="manualSelect"><option value="">-- Naam Chunein --</option></select>
-        <button class="btn-action btn-green" onclick="markManual()">📸 Selfie Lekar Hajiri Lagayein</button>
-      </div>
-    </details>
-    <div style="border-top:1px solid #334155; padding-top:8px;">
+    <label style="font-size:13px; color:#cbd5e1; font-weight:bold;">Khiladi Ka Naam Chunein:</label>
+    <select id="attendanceSelect"><option value="">-- Pehle Khiladi Jodein --</option></select>
+    
+    <button class="btn-action btn-green" onclick="markAttendanceWithSelfie()">📸 Selfie Khichkar Hajiri Lagayein</button>
+
+    <div style="border-top:1px solid #334155; padding-top:10px; margin-top:12px;">
       <small id="currentShiftLabel" style="color:#94a3b8;">Today's Present Players:</small>
       <div id="todayBadges" style="margin-top:6px;"></div>
     </div>
   </div>
 
+  <!-- 2. Register Player Panel -->
   <div id="p-reg" class="panel">
     <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">Naya Khiladi Register Karein</h3>
-    <label style="font-size:13px;">Khiladi Ka Naam:</label>
-    <input type="text" id="sName" placeholder="Ex: Aman Kumar">
-    <label style="font-size:13px;">Game / Batch:</label>
-    <input type="text" id="sBatch" placeholder="Ex: Volleyball U-14">
-    <button class="btn-action btn-green" onclick="registerFace()">📷 Chehra Scan Karke Save Karein</button>
+    <label style="font-size:13px;">Khiladi Ka Pura Naam:</label>
+    <input type="text" id="sName" placeholder="Jaise: Aman Kumar">
+    <label style="font-size:13px;">Game / Batch / Urm Varg:</label>
+    <input type="text" id="sBatch" placeholder="Jaise: Volleyball U-14">
+    <button class="btn-action btn-green" onclick="registerNewStudent()">💾 Naam Save Karein</button>
+
     <div style="margin-top:16px; border-top:1px solid #334155; padding-top:10px;">
-      <small style="color:#94a3b8;">Total Registered (<span id="totalStudents">0</span>):</small>
+      <small style="color:#94a3b8;">Total Registered Players (<span id="totalStudents">0</span>):</small>
       <div id="studentList" style="margin-top:8px; max-height:180px; overflow-y:auto;"></div>
     </div>
   </div>
 
+  <!-- 3. Report & PDF Panel -->
   <div id="p-rep" class="panel">
     <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">📊 CCR Attendance & Photo Report</h3>
     
     <label style="font-size:13px; color:#cbd5e1;">Filter Report:</label>
     <select id="dateFilter" onchange="refreshUI()">
       <option value="TODAY_CURRENT">Today - Current Shift Only</option>
-      <option value="TODAY_MORNING">Today - Morning Shift</option>
-      <option value="TODAY_EVENING">Today - Evening Shift</option>
+      <option value="TODAY_MORNING">Today - Morning Shift (Before 12 PM)</option>
+      <option value="TODAY_EVENING">Today - Evening Shift (After 12 PM)</option>
       <option value="TODAY_ALL">Today - Both Shifts</option>
       <option value="ALL">All Dates Record</option>
     </select>
@@ -108,6 +106,7 @@
     <button class="btn-action btn-red" onclick="clearLogs()">🗑️ Clear Old Logs</button>
   </div>
 
+  <!-- Hidden PDF Template -->
   <div id="pdfWrapper" style="display:none; background:#ffffff; color:#000000; padding:15px; width:750px; margin:0 auto;">
     <div style="text-align:center; border-bottom:2px solid #0284c7; padding-bottom:10px; margin-bottom:12px;">
       <h2 style="margin:0; color:#0284c7; font-size:24px;">CCR SPORTS ACADEMY</h2>
@@ -117,18 +116,13 @@
   </div>
 
   <canvas id="canvas" style="display:none;"></canvas>
+
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-
-  let students = JSON.parse(localStorage.getItem('ccr_students_v6') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_logs_v6') || '[]');
-  let faceMatcher = null;
-  let isBusy = false;
-  let activeTab = 'att';
+  let students = JSON.parse(localStorage.getItem('ccr_students_v7') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_logs_v7') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
-  let aiLoaded = false;
 
   const video = document.getElementById('video');
   const statusEl = document.getElementById('status');
@@ -164,92 +158,82 @@
   async function init() {
     updateShiftBanner();
     setInterval(updateShiftBanner, 30000);
-
     try {
       await startCamera();
-      statusEl.innerText = "Camera Ready. Loading AI Engine...";
-      
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      
-      aiLoaded = true;
-      rebuildMatcher();
       refreshUI();
-      
-      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' mein jaakar chehra save karein." : "🤖 Auto AI Ready! Camera ke samne khade rahein.";
-      startScanning();
+      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' par click karke naam save karein." : "✅ Camera & System Ready!";
     } catch (e) {
-      statusEl.innerText = "⚠️ AI Load Failed. Use Manual Attendance below.";
+      statusEl.innerText = "❌ Camera Error: Please allow camera permission.";
     }
   }
 
   async function startCamera() {
     if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop());
+      currentStream.getTracks().forEach(track => track.stop());
     }
-    currentStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: useFrontCamera ? 'user' : 'environment' }, audio: false
-    });
+    const constraints = {
+      video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+      audio: false
+    };
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = currentStream;
-    if (useFrontCamera) video.classList.add('front-cam');
-    else video.classList.remove('front-cam');
+    if (useFrontCamera) {
+      video.classList.add('front-cam');
+    } else {
+      video.classList.remove('front-cam');
+    }
   }
 
   async function switchCamera() {
     useFrontCamera = !useFrontCamera;
     statusEl.innerText = "Switching camera...";
-    await startCamera();
-    statusEl.innerText = useFrontCamera ? "Front Camera Active" : "Back Camera Active";
+    try {
+      await startCamera();
+      statusEl.innerText = useFrontCamera ? "Switched to Front Camera" : "Switched to Back Camera";
+    } catch (err) {
+      statusEl.innerText = "Could not switch camera.";
+    }
   }
 
-  function rebuildMatcher() {
-    if (students.length === 0) { faceMatcher = null; return; }
-    const labeled = students.map(s => new faceapi.LabeledFaceDescriptors(s.name, [new Float32Array(s.descriptor)]));
-    faceMatcher = new faceapi.FaceMatcher(labeled, 0.48);
-  }
-
-  function startScanning() {
-    setInterval(async () => {
-      if (activeTab !== 'att' || isBusy || !aiLoaded || !faceMatcher) return;
-      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-      if (!det) return;
-
-      const match = faceMatcher.findBestMatch(det.descriptor);
-      if (match.label !== 'unknown') {
-        const stu = students.find(s => s.name === match.label);
-        if (stu) saveAttendance(stu.name, stu.batch);
-      }
-    }, 1200);
-  }
-
-  async function registerFace() {
+  function registerNewStudent() {
     const name = document.getElementById('sName').value.trim();
     const batch = document.getElementById('sBatch').value.trim() || 'Volleyball';
     if (!name) { alert("कृपया खिलाड़ी का नाम लिखें!"); return; }
-    if (!aiLoaded) { alert("AI Engine abhi load ho raha hai, 5 second rukein!"); return; }
-
-    statusEl.innerText = "🔍 Chehra scan ho raha hai, seedha dekhein...";
-    const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if (!det) {
-      alert("Chehra saaf nahi dikha! Thoda roshni mein aakar seedha camera mein dekhein.");
-      statusEl.innerText = "Scan failed. Try again.";
-      return;
-    }
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
-    students.push({ name: name, batch: batch, descriptor: Array.from(det.descriptor) });
-    localStorage.setItem('ccr_students_v6', JSON.stringify(students));
+    students.push({ name: name, batch: batch });
+    localStorage.setItem('ccr_students_v7', JSON.stringify(students));
 
-    rebuildMatcher();
-    refreshUI();
     document.getElementById('sName').value = '';
-    statusEl.innerText = `✅ ${name} ka chehra save ho gaya!`;
+    refreshUI();
+    statusEl.innerText = `✅ ${name} सफलतापूर्वक सेव हो गए!`;
     speak(name + " ka registration pura hua");
     showTab('att');
   }
 
-  function takeStampedSelfie(name, batch, shift) {
+  function deleteStudent(idx) {
+    if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
+      students.splice(idx, 1);
+      localStorage.setItem('ccr_students_v7', JSON.stringify(students));
+      refreshUI();
+    }
+  }
+
+  function markAttendanceWithSelfie() {
+    const name = document.getElementById('attendanceSelect').value;
+    if (!name) { alert("कृपया लिस्ट में से खिलाड़ी का नाम चुनें!"); return; }
+
+    const today = getTodayDate();
+    const currentShift = getCurrentShift();
+
+    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) {
+      alert(name + " ki is " + currentShift + " shift ki hajiri pehle hi lag chuki hai!");
+      return;
+    }
+
+    const student = students.find(s => s.name === name);
+    const batch = student ? student.batch : 'General';
+
     const canvas = document.getElementById('canvas');
     canvas.width = 480; canvas.height = 360;
     const ctx = canvas.getContext('2d');
@@ -269,8 +253,16 @@
     ctx.fillRect(0, canvas.height - 85, canvas.width, 85);
 
     ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px sans-serif";
-    ctx.fillText(ACADEMY_NAME + " [" + shift.toUpperCase() + "]", 12, canvas.height - 60);
+    ctx.fillText(ACADEMY_NAME + " [" + currentShift.toUpperCase() + "]", 12, canvas.height - 60);
     
     ctx.fillStyle = "#38bdf8"; ctx.font = "bold 17px sans-serif";
-    ctx
+    ctx.fillText(name + " (" + batch + ")", 12, canvas.height - 36);
     
+    ctx.fillStyle = "#ffffff"; ctx.font = "13px sans-serif";
+    ctx.fillText("Time: " + now, 12, canvas.height - 12);
+
+    const photo = canvas.toDataURL('image/jpeg', 0.75);
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    logs.unshift({ date
+                  
