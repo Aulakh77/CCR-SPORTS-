@@ -16,7 +16,7 @@
     .nav-tabs { display: flex; justify-content: center; gap: 6px; max-width: 460px; margin: 8px auto; }
     .tab-btn { flex: 1; padding: 11px 6px; border: none; border-radius: 8px; background: #334155; color: #cbd5e1; font-weight: bold; font-size: 13px; cursor: pointer; }
     .tab-btn.active { background: #0284c7; color: #fff; }
-    .camera-box { position: relative; max-width: 420px; margin: 0 auto; border: 3px solid #38bdf8; border-radius: 14px; overflow: hidden; background: #000; }
+    .camera-box { position: relative; max-width: 420px; margin: 0 auto; border: 3px solid #38bdf8; border-radius: 14px; overflow: hidden; background: #000; min-height: 280px; display: flex; align-items: center; justify-content: center; }
     video { width: 100%; height: auto; display: block; }
     video.front-cam { transform: scaleX(-1); }
     .panel { display: none; background: #1e293b; padding: 14px; border-radius: 12px; max-width: 460px; margin: 10px auto; text-align: left; border: 1px solid #334155; }
@@ -40,7 +40,7 @@
     <div class="sub-title">Smart Attendance System</div>
     <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
   </div>
-  <div id="status" class="status-bar">⚡ Camera Ready!</div>
+  <div id="status" class="status-bar">⚡ Initializing...</div>
 
   <div class="nav-tabs">
     <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Hajiri Lagayein</button>
@@ -119,8 +119,8 @@
 
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  let students = JSON.parse(localStorage.getItem('ccr_students_v7') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_logs_v7') || '[]');
+  let students = JSON.parse(localStorage.getItem('ccr_students_v8') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_logs_v8') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
 
@@ -159,11 +159,12 @@
     updateShiftBanner();
     setInterval(updateShiftBanner, 30000);
     try {
+      statusEl.innerText = "Requesting Camera Access...";
       await startCamera();
       refreshUI();
-      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' par click karke naam save karein." : "✅ Camera & System Ready!";
+      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' par click karein." : "✅ Camera Active & Ready!";
     } catch (e) {
-      statusEl.innerText = "❌ Camera Error: Please allow camera permission.";
+      statusEl.innerText = "❌ Camera Blocked: Please Allow Permission in Browser.";
     }
   }
 
@@ -177,6 +178,8 @@
     };
     currentStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = currentStream;
+    await video.play().catch(err => console.log("Video play error:", err));
+
     if (useFrontCamera) {
       video.classList.add('front-cam');
     } else {
@@ -189,7 +192,7 @@
     statusEl.innerText = "Switching camera...";
     try {
       await startCamera();
-      statusEl.innerText = useFrontCamera ? "Switched to Front Camera" : "Switched to Back Camera";
+      statusEl.innerText = useFrontCamera ? "Front Camera Active" : "Back Camera Active";
     } catch (err) {
       statusEl.innerText = "Could not switch camera.";
     }
@@ -202,7 +205,7 @@
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
     students.push({ name: name, batch: batch });
-    localStorage.setItem('ccr_students_v7', JSON.stringify(students));
+    localStorage.setItem('ccr_students_v8', JSON.stringify(students));
 
     document.getElementById('sName').value = '';
     refreshUI();
@@ -214,7 +217,7 @@
   function deleteStudent(idx) {
     if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
       students.splice(idx, 1);
-      localStorage.setItem('ccr_students_v7', JSON.stringify(students));
+      localStorage.setItem('ccr_students_v8', JSON.stringify(students));
       refreshUI();
     }
   }
@@ -264,5 +267,68 @@
     const photo = canvas.toDataURL('image/jpeg', 0.75);
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    logs.unshift({ date
-                  
+    logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
+    if (logs.length > 450) logs.pop();
+    localStorage.setItem('ccr_logs_v8', JSON.stringify(logs));
+
+    refreshUI();
+    statusEl.innerText = `🎉 ${name} ki hajiri lag gayi!`;
+    speak(name + ", aapki hajiri lag gayi hai");
+  }
+
+  function getFilteredLogs() {
+    const filter = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : 'TODAY_CURRENT';
+    const today = getTodayDate();
+    const curShift = getCurrentShift();
+
+    if (filter === 'TODAY_CURRENT') return logs.filter(l => l.date === today && getLogShift(l) === curShift);
+    if (filter === 'TODAY_MORNING') return logs.filter(l => l.date === today && getLogShift(l) === 'Morning');
+    if (filter === 'TODAY_EVENING') return logs.filter(l => l.date === today && getLogShift(l) === 'Evening');
+    if (filter === 'TODAY_ALL') return logs.filter(l => l.date === today);
+    return logs;
+  }
+
+  function refreshUI() {
+    updateShiftBanner();
+    const today = getTodayDate();
+    const curShift = getCurrentShift();
+    const currentShiftLogs = logs.filter(l => l.date === today && getLogShift(l) === curShift);
+    document.getElementById('topCount').innerText = currentShiftLogs.length;
+
+    document.getElementById('todayBadges').innerHTML = currentShiftLogs.length === 0 
+      ? '<span style="color:#64748b;font-size:13px;">Aaj is shift mein abhi koi hajiri nahi lagi</span>'
+      : currentShiftLogs.map(l => '<span class="badge">✔ '+l.name+' ('+l.time+')</span>').join('');
+
+    const sel = document.getElementById('attendanceSelect');
+    sel.innerHTML = students.length === 0 ? '<option value="">-- Pehle Khiladi Jodein --</option>' : '<option value="">-- Naam Chunein --</option>' +
+      students.map(s => '<option value="'+s.name+'">'+s.name+' ('+s.batch+')</option>').join('');
+
+    document.getElementById('totalStudents').innerText = students.length;
+    document.getElementById('studentList').innerHTML = students.map((s, i) => 
+      '<div class="student-row"><span>👤 <b>'+s.name+'</b> <small style="color:#94a3b8;">('+s.batch+')</small></span><button onclick="deleteStudent('+i+')" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">Hatae</button></div>'
+    ).join('');
+
+    const showLogs = getFilteredLogs();
+    document.getElementById('logsContainer').innerHTML = showLogs.length === 0
+      ? '<div style="color:#94a3b8;text-align:center;padding:15px;">Koi record nahi mila.</div>'
+      : showLogs.map(l => {
+          const sh = getLogShift(l);
+          return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
+        }).join('');
+  }
+
+  function downloadPhotosPDF() {
+    const list = getFilteredLogs();
+    if (list.length === 0) { alert("PDF banane ke liye koi record nahi hai!"); return; }
+
+    statusEl.innerText = "PDF ban rahi hai... 3 second rukein.";
+    const filterSelect = document.getElementById('dateFilter');
+    const filterText = filterSelect.options[filterSelect.selectedIndex].text;
+    const titleDate = getTodayDate();
+
+    document.getElementById('pdfSubTitle').innerText = filterText + " | Date: " + titleDate + " | Total Present: " + list.length;
+
+    const grid = document.getElementById('pdfGrid');
+    grid.innerHTML = list.map((l, idx) => {
+      const
+  
