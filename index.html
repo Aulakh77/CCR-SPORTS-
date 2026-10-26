@@ -96,7 +96,7 @@
       <option value="TODAY_MORNING">Today - Morning Shift (Before 12 PM)</option>
       <option value="TODAY_EVENING">Today - Evening Shift (After 12 PM)</option>
       <option value="TODAY_ALL">Today - Both Shifts</option>
-      <option value="ALL">All Dates Record</option>
+      <option value="ALL">All Dates Record (Sabhi Din)</option>
     </select>
 
     <button class="btn-action btn-green" onclick="downloadPhotosPDF()">📄 Download All Photos PDF</button>
@@ -119,8 +119,8 @@
 
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  let students = JSON.parse(localStorage.getItem('ccr_master_students') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_master_logs') || '[]');
+  let students = JSON.parse(localStorage.getItem('ccr_final_students') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_final_logs') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
 
@@ -206,7 +206,7 @@
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
     students.push({ name: name, batch: batch });
-    localStorage.setItem('ccr_master_students', JSON.stringify(students));
+    localStorage.setItem('ccr_final_students', JSON.stringify(students));
 
     document.getElementById('sName').value = '';
     refreshUI();
@@ -218,7 +218,7 @@
   function deleteStudent(idx) {
     if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
       students.splice(idx, 1);
-      localStorage.setItem('ccr_master_students', JSON.stringify(students));
+      localStorage.setItem('ccr_final_students', JSON.stringify(students));
       refreshUI();
     }
   }
@@ -270,7 +270,7 @@
 
     logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
     if (logs.length > 500) logs.pop();
-    localStorage.setItem('ccr_master_logs', JSON.stringify(logs));
+    localStorage.setItem('ccr_final_logs', JSON.stringify(logs));
 
     refreshUI();
     statusEl.innerText = `🎉 ${name} ki hajiri lag gayi!`;
@@ -389,7 +389,7 @@
 
   function clearLogs() {
     if (confirm("Kya aap purana record hatana chahte hain?")) {
-      logs = []; localStorage.setItem('ccr_master_logs', '[]'); refreshUI();
+      logs = []; localStorage.setItem('ccr_final_logs', '[]'); refreshUI();
     }
   }
 
