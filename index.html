@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CCR Sports Academy - Attendance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
@@ -13,7 +12,7 @@
     h2 { margin: 0; color: #ffffff; font-size: 21px; letter-spacing: 0.5px; }
     .sub-title { color: #bae6fd; font-size: 13px; margin-top: 3px; font-weight: bold; }
     .shift-banner { display: inline-block; background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 13px; padding: 4px 12px; border-radius: 20px; margin-top: 6px; }
-    .status-bar { background: #1e293b; color: #38bdf8; padding: 10px; border-radius: 10px; margin: 8px auto; max-width: 460px; font-weight: bold; font-size: 14px; border: 1px solid #334155; }
+    .status-bar { background: #1e293b; color: #34d399; padding: 10px; border-radius: 10px; margin: 8px auto; max-width: 460px; font-weight: bold; font-size: 14px; border: 1px solid #334155; }
     .nav-tabs { display: flex; justify-content: center; gap: 6px; max-width: 460px; margin: 8px auto; }
     .tab-btn { flex: 1; padding: 11px 6px; border: none; border-radius: 8px; background: #334155; color: #cbd5e1; font-weight: bold; font-size: 13px; cursor: pointer; }
     .tab-btn.active { background: #0284c7; color: #fff; }
@@ -41,7 +40,7 @@
     <div class="sub-title">Smart Attendance System</div>
     <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
   </div>
-  <div id="status" class="status-bar">⚡ Initializing...</div>
+  <div id="status" class="status-bar">⚡ Camera Active!</div>
 
   <div class="nav-tabs">
     <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Hajiri Lagayein</button>
@@ -120,14 +119,10 @@
 
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-
-  let students = JSON.parse(localStorage.getItem('ccr_stable_students_v3') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_stable_logs_v3') || '[]');
+  let students = JSON.parse(localStorage.getItem('ccr_ultra_students_v4') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_ultra_logs_v4') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
-  let faceMatcher = null;
-  let aiLoaded = false;
 
   const video = document.getElementById('video');
   const statusEl = document.getElementById('status');
@@ -161,114 +156,57 @@
     if(lbl) lbl.innerText = "Today's " + s + " Shift Present Players:";
   }
 
-  // Safe window load initialization
-  window.addEventListener('DOMContentLoaded', async () => {
+  // Turant bina kisi wait ke camera start karne ka function
+  async function initApp() {
     updateShiftBanner();
     setInterval(updateShiftBanner, 30000);
     refreshUI();
 
     try {
       statusEl.innerText = "Starting Camera...";
-      await startCamera();
+      currentStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+        audio: false
+      });
+      video.srcObject = currentStream;
+      await video.play();
       statusEl.innerText = "✅ Camera Ready & Working!";
-      
-      // Load AI safely in background without blocking UI
-      setTimeout(loadAIBg, 1000);
     } catch (err) {
-      statusEl.innerText = "❌ Camera Error: Check Permissions.";
+      statusEl.innerText = "❌ Camera Error: Please check permissions.";
       console.error(err);
-    }
-  });
-
-  async function startCamera() {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
-    const constraints = {
-      video: { facingMode: useFrontCamera ? 'user' : 'environment' },
-      audio: false
-    };
-    
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = currentStream;
-    await video.play().catch(e => console.log("Play error:", e));
-
-    if (useFrontCamera) {
-      video.classList.add('front-cam');
-    } else {
-      video.classList.remove('front-cam');
     }
   }
 
   async function switchCamera() {
     useFrontCamera = !useFrontCamera;
     statusEl.innerText = "Switching camera...";
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
     try {
-      await startCamera();
+      currentStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+        audio: false
+      });
+      video.srcObject = currentStream;
+      await video.play();
+      if (useFrontCamera) video.classList.add('front-cam');
+      else video.classList.remove('front-cam');
       statusEl.innerText = useFrontCamera ? "Front Camera Active" : "Back Camera Active";
     } catch (err) {
       statusEl.innerText = "Could not switch camera.";
     }
   }
 
-  async function loadAIBg() {
-    try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      aiLoaded = true;
-      rebuildMatcher();
-      if(students.length > 0) {
-        statusEl.innerText = "🤖 Auto AI Face Recognition Active!";
-        startScanning();
-      }
-    } catch (e) {
-      console.log("AI load skipped safely.");
-    }
-  }
-
-  function rebuildMatcher() {
-    if (students.length === 0) { faceMatcher = null; return; }
-    const labeled = students.filter(s => s.descriptor).map(s => new faceapi.LabeledFaceDescriptors(s.name, [new Float32Array(s.descriptor)]));
-    if(labeled.length > 0) {
-      faceMatcher = new faceapi.FaceMatcher(labeled, 0.48);
-    }
-  }
-
-  function startScanning() {
-    setInterval(async () => {
-      if (activeTab !== 'att' || !aiLoaded || !faceMatcher) return;
-      try {
-        const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        if (!det) return;
-
-        const match = faceMatcher.findBestMatch(det.descriptor);
-        if (match.label !== 'unknown') {
-          const stu = students.find(s => s.name === match.label);
-          if (stu) saveAttendance(stu.name, stu.batch);
-        }
-      } catch (e) {}
-    }, 1500);
-  }
-
-  async function registerNewStudent() {
+  function registerNewStudent() {
     const name = document.getElementById('sName').value.trim();
     const batch = document.getElementById('sBatch').value.trim() || 'Volleyball';
     if (!name) { alert("कृपया खिलाड़ी का नाम लिखें!"); return; }
 
-    let descriptor = null;
-    if (aiLoaded) {
-      try {
-        const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        if (det) { descriptor = Array.from(det.descriptor); }
-      } catch(e){}
-    }
-
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
-    students.push({ name: name, batch: batch, descriptor: descriptor });
-    localStorage.setItem('ccr_stable_students_v3', JSON.stringify(students));
+    students.push({ name: name, batch: batch });
+    localStorage.setItem('ccr_ultra_students_v4', JSON.stringify(students));
 
-    if (aiLoaded) rebuildMatcher();
     document.getElementById('sName').value = '';
     refreshUI();
     statusEl.innerText = `✅ ${name} सफलतापूर्वक सेव हो गए!`;
@@ -279,8 +217,7 @@
   function deleteStudent(idx) {
     if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
       students.splice(idx, 1);
-      localStorage.setItem('ccr_stable_students_v3', JSON.stringify(students));
-      if(aiLoaded) rebuildMatcher();
+      localStorage.setItem('ccr_ultra_students_v4', JSON.stringify(students));
       refreshUI();
     }
   }
@@ -332,50 +269,10 @@
 
     logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
     if (logs.length > 500) logs.pop();
-    localStorage.setItem('ccr_stable_logs_v3', JSON.stringify(logs));
+    localStorage.setItem('ccr_ultra_logs_v4', JSON.stringify(logs));
 
     refreshUI();
     statusEl.innerText = `🎉 ${name} ki hajiri lag gayi!`;
-    speak(name + ", aapki hajiri lag gayi hai");
-  }
-
-  function saveAttendance(name, batch) {
-    const today = getTodayDate();
-    const currentShift = getCurrentShift();
-    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) return;
-
-    const canvas = document.getElementById('canvas');
-    canvas.width = 480; canvas.height = 360;
-    const ctx = canvas.getContext('2d');
-    
-    if (useFrontCamera) {
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height - 30);
-      ctx.restore();
-    } else {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height - 30);
-    }
-
-    const now = new Date().toLocaleString('en-IN');
-    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-    ctx.fillRect(0, canvas.height - 85, canvas.width, 85);
-    ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px sans-serif";
-    ctx.fillText(ACADEMY_NAME + " [" + currentShift.toUpperCase() + "]", 12, canvas.height - 60);
-    ctx.fillStyle = "#38bdf8"; ctx.font = "bold 17px sans-serif";
-    ctx.fillText(name + " (" + batch + ")", 12, canvas.height - 36);
-    ctx.fillStyle = "#ffffff"; ctx.font = "13px sans-serif";
-    ctx.fillText("Time: " + now, 12, canvas.height - 12);
-
-    const photo = canvas.toDataURL('image/jpeg', 0.75);
-    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
-    if (logs.length > 500) logs.pop();
-    localStorage.setItem('ccr_stable_logs_v3', JSON.stringify(logs));
-
-    refreshUI();
-    statusEl.innerText = `🎉 AUTO PRESENT: ${name} (${timeStr})`;
     speak(name + ", aapki hajiri lag gayi hai");
   }
 
@@ -391,7 +288,7 @@
     return logs;
   }
 
-  function refreshUI() {
+    function refreshUI() {
     updateShiftBanner();
     const today = getTodayDate();
     const curShift = getCurrentShift();
@@ -430,4 +327,91 @@
         ? '<div style="color:#94a3b8;text-align:center;padding:15px;">Koi record nahi mila.</div>'
         : showLogs.map(l => {
             const sh = getLogShift(l);
-            return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'"
+            return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
+          }).join('');
+    }
+  }
+
+  function downloadPhotosPDF() {
+    const list = getFilteredLogs();
+    if (list.length === 0) { alert("PDF banane ke liye koi record nahi hai!"); return; }
+
+    statusEl.innerText = "PDF ban rahi hai... 3 second rukein.";
+    const filterSelect = document.getElementById('dateFilter');
+    const filterText = filterSelect.options[filterSelect.selectedIndex].text;
+    const titleDate = getTodayDate();
+
+    document.getElementById('pdfSubTitle').innerText = filterText + " | Date: " + titleDate + " | Total Present: " + list.length;
+
+    const grid = document.getElementById('pdfGrid');
+    grid.innerHTML = list.map((l, idx) => {
+      const sh = getLogShift(l);
+      return `
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:6px; text-align:center; background:#f8fafc; page-break-inside:avoid;">
+        <img src="${l.photo}" style="width:100%; height:135px; object-fit:cover; border-radius:6px; border:1px solid #0284c7;">
+        <div style="font-weight:bold; font-size:12px; color:#0f172a; margin-top:3px;">${idx + 1}. ${l.name} (${sh})</div>
+        <div style="font-size:10px; color:#0284c7; font-weight:bold;">${l.date} | ${l.time}</div>
+      </div>
+    `}).join('');
+
+    const wrapper = document.getElementById('pdfWrapper');
+    wrapper.style.display = 'block';
+
+    const opt = {
+      margin: 8,
+      filename: 'CCR_Academy_' + titleDate + '_' + getCurrentShift() + '.pdf',
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(wrapper).save().then(() => {
+      wrapper.style.display = 'none';
+      statusEl.innerText = "✅ PDF Download Successfully!";
+    });
+  }
+
+  function exportCSV() {
+    const list = getFilteredLogs();
+    if (list.length === 0) { alert("Download ke liye koi record nahi hai!"); return; }
+    let csv = "Academy,Date,Shift,Time,Player Name,Sport Batch\n";
+    list.forEach(l => { 
+      const sh = getLogShift(l);
+      csv += '"'+ACADEMY_NAME+'","'+l.date+'","'+sh+'","'+l.time+'","'+l.name+'","'+l.batch+'"\n'; 
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'CCR_Attendance_'+getTodayDate()+'_'+getCurrentShift()+'.csv';
+    link.click();
+  }
+
+  function clearLogs() {
+    if (confirm("Kya aap purana record hatana chahte hain?")) {
+      logs = []; localStorage.setItem('ccr_ultra_logs_v4', '[]'); refreshUI();
+    }
+  }
+
+  function showTab(t) {
+    activeTab = t;
+    document.getElementById('t1').classList.toggle('active', t === 'att');
+    document.getElementById('t2').classList.toggle('active', t === 'reg');
+    document.getElementById('t3').classList.toggle('active', t === 'rep');
+    document.getElementById('p-att').classList.toggle('active', t === 'att');
+    document.getElementById('p-reg').classList.toggle('active', t === 'reg');
+    document.getElementById('p-rep').classList.toggle('active', t === 'rep');
+    document.getElementById('camContainer').style.display = (t === 'rep') ? 'none' : 'block';
+  }
+
+  function speak(txt) {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'hi-IN'; window.speechSynthesis.speak(u);
+    }
+  }
+
+  // App turant load ho jayegi
+  window.onload = initApp;
+</script>
+</body>
+</html>
