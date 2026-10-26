@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CCR Sports Academy - Auto AI Attendance</title>
+  <title>CCR Sports Academy - Attendance</title>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -38,13 +38,13 @@
 <body>
   <div class="header-box">
     <h2>🏆 CCR SPORTS ACADEMY</h2>
-    <div class="sub-title">Auto Face Recognition Attendance</div>
+    <div class="sub-title">Smart Attendance System</div>
     <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
   </div>
-  <div id="status" class="status-bar">⚡ Camera Starting...</div>
+  <div id="status" class="status-bar">⚡ App Initializing...</div>
 
   <div class="nav-tabs">
-    <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Auto Hajiri</button>
+    <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Hajiri Lagayein</button>
     <button id="t2" class="tab-btn" onclick="showTab('reg')">➕ Naya Khiladi Jodein</button>
     <button id="t3" class="tab-btn" onclick="showTab('rep')">📋 Report (<span id="topCount">0</span>)</button>
   </div>
@@ -59,19 +59,14 @@
     </button>
   </div>
 
-  <!-- 1. Auto Attendance Panel -->
+  <!-- 1. Attendance Panel -->
   <div id="p-att" class="panel active">
-    <div style="text-align:center; color:#34d399; font-size:13px; font-weight:bold; margin-bottom:8px;">
-      🤖 Auto AI Mode On: Camera ke samne aate hi hajiri lag jayegi!
+    <div style="margin-bottom: 10px;">
+      <label style="font-size:13px; color:#cbd5e1; font-weight:bold;">Khiladi Ka Naam Chunein:</label>
+      <select id="attendanceSelect"><option value="">-- Pehle Khiladi Jodein --</option></select>
+      <button class="btn-action btn-green" onclick="markAttendanceWithSelfie()">📸 Selfie Khichkar Hajiri Lagayein</button>
     </div>
-    <details style="margin-bottom:10px;">
-      <summary style="color:#38bdf8; cursor:pointer; font-size:14px; font-weight:bold;">👉 Manual Hajiri (Agar AI na pehchane)</summary>
-      <div style="margin-top:8px;">
-        <select id="manualSelect"><option value="">-- Naam Chunein --</option></select>
-        <button class="btn-action btn-green" onclick="markManual()">📸 Selfie Lekar Hajiri Lagayein</button>
-      </div>
-    </details>
-    <div style="border-top:1px solid #334155; padding-top:8px;">
+    <div style="border-top:1px solid #334155; padding-top:10px; margin-top:12px;">
       <small id="currentShiftLabel" style="color:#94a3b8;">Today's Present Players:</small>
       <div id="todayBadges" style="margin-top:6px;"></div>
     </div>
@@ -80,26 +75,27 @@
   <!-- 2. Register Player Panel -->
   <div id="p-reg" class="panel">
     <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">Naya Khiladi Register Karein</h3>
-    <label style="font-size:13px;">Khiladi Ka Naam:</label>
-    <input type="text" id="sName" placeholder="Ex: Aman Kumar">
-    <label style="font-size:13px;">Game / Batch:</label>
-    <input type="text" id="sBatch" placeholder="Ex: Volleyball U-14">
-    <button class="btn-action btn-green" onclick="registerFace()">📷 Chehra Scan Karke Save Karein</button>
+    <label style="font-size:13px;">Khiladi Ka Pura Naam:</label>
+    <input type="text" id="sName" placeholder="Jaise: Aman Kumar">
+    <label style="font-size:13px;">Game / Batch / Urm Varg:</label>
+    <input type="text" id="sBatch" placeholder="Jaise: Volleyball U-14">
+    <button class="btn-action btn-green" onclick="registerNewStudent()">💾 Naam Save Karein</button>
+
     <div style="margin-top:16px; border-top:1px solid #334155; padding-top:10px;">
-      <small style="color:#94a3b8;">Total Registered (<span id="totalStudents">0</span>):</small>
+      <small style="color:#94a3b8;">Total Registered Players (<span id="totalStudents">0</span>):</small>
       <div id="studentList" style="margin-top:8px; max-height:180px; overflow-y:auto;"></div>
     </div>
   </div>
 
-  <!-- 3. Report Panel -->
+  <!-- 3. Report & PDF Panel -->
   <div id="p-rep" class="panel">
     <h3 style="margin:0 0 8px 0; color:#38bdf8; font-size:16px;">📊 CCR Attendance & Photo Report</h3>
     
     <label style="font-size:13px; color:#cbd5e1;">Filter Report:</label>
     <select id="dateFilter" onchange="refreshUI()">
       <option value="TODAY_CURRENT">Today - Current Shift Only</option>
-      <option value="TODAY_MORNING">Today - Morning Shift</option>
-      <option value="TODAY_EVENING">Today - Evening Shift</option>
+      <option value="TODAY_MORNING">Today - Morning Shift (Before 12 PM)</option>
+      <option value="TODAY_EVENING">Today - Evening Shift (After 12 PM)</option>
       <option value="TODAY_ALL">Today - Both Shifts</option>
       <option value="ALL">All Dates Record</option>
     </select>
@@ -111,6 +107,7 @@
     <button class="btn-action btn-red" onclick="clearLogs()">🗑️ Clear Old Logs</button>
   </div>
 
+  <!-- Hidden PDF Template -->
   <div id="pdfWrapper" style="display:none; background:#ffffff; color:#000000; padding:15px; width:750px; margin:0 auto;">
     <div style="text-align:center; border-bottom:2px solid #0284c7; padding-bottom:10px; margin-bottom:12px;">
       <h2 style="margin:0; color:#0284c7; font-size:24px;">CCR SPORTS ACADEMY</h2>
@@ -120,18 +117,13 @@
   </div>
 
   <canvas id="canvas" style="display:none;"></canvas>
+
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-
-  let students = JSON.parse(localStorage.getItem('ccr_students_v9') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_logs_v9') || '[]');
-  let faceMatcher = null;
-  let isBusy = false;
-  let activeTab = 'att';
+  let students = JSON.parse(localStorage.getItem('ccr_students_v10') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_logs_v10') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
-  let aiLoaded = false;
 
   const video = document.getElementById('video');
   const statusEl = document.getElementById('status');
@@ -161,101 +153,94 @@
       banner.innerHTML = "🌆 Active Shift: EVENING (Valid till 12:00 AM)";
       banner.style.background = "#f59e0b";
     }
-    document.getElementById('currentShiftLabel').innerText = "Today's " + s + " Shift Present Players:";
+    const lbl = document.getElementById('currentShiftLabel');
+    if(lbl) lbl.innerText = "Today's " + s + " Shift Present Players:";
   }
 
   async function init() {
     updateShiftBanner();
     setInterval(updateShiftBanner, 30000);
-
+    
     try {
-      statusEl.innerText = "Starting Camera...";
+      statusEl.innerText = "Requesting Camera...";
       await startCamera();
-      
-      statusEl.innerText = "Loading AI Face Engine...";
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      
-      aiLoaded = true;
-      rebuildMatcher();
       refreshUI();
-      
-      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' mein jaakar chehra save karein." : "🤖 Auto AI Ready! Camera ke samne khade rahein.";
-      startScanning();
+      statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' par click karein." : "✅ Camera Active & Ready!";
     } catch (e) {
-      statusEl.innerText = "⚠️ AI Load Failed. Use Manual Attendance below.";
+      statusEl.innerText = "❌ Camera Error: Please Allow Permission.";
+      console.error(e);
     }
   }
 
   async function startCamera() {
     if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop());
+      currentStream.getTracks().forEach(track => track.stop());
     }
-    currentStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: useFrontCamera ? 'user' : 'environment' }, audio: false
-    });
+    const constraints = {
+      video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+      audio: false
+    };
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = currentStream;
     await video.play().catch(err => console.log("Video play error:", err));
 
-    if (useFrontCamera) video.classList.add('front-cam');
-    else video.classList.remove('front-cam');
+    if (useFrontCamera) {
+      video.classList.add('front-cam');
+    } else {
+      video.classList.remove('front-cam');
+    }
   }
 
   async function switchCamera() {
     useFrontCamera = !useFrontCamera;
     statusEl.innerText = "Switching camera...";
-    await startCamera();
-    statusEl.innerText = useFrontCamera ? "Front Camera Active" : "Back Camera Active";
+    try {
+      await startCamera();
+      statusEl.innerText = useFrontCamera ? "Front Camera Active" : "Back Camera Active";
+    } catch (err) {
+      statusEl.innerText = "Could not switch camera.";
+    }
   }
 
-  function rebuildMatcher() {
-    if (students.length === 0) { faceMatcher = null; return; }
-    const labeled = students.map(s => new faceapi.LabeledFaceDescriptors(s.name, [new Float32Array(s.descriptor)]));
-    faceMatcher = new faceapi.FaceMatcher(labeled, 0.48);
-  }
-
-  function startScanning() {
-    setInterval(async () => {
-      if (activeTab !== 'att' || isBusy || !aiLoaded || !faceMatcher) return;
-      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-      if (!det) return;
-
-      const match = faceMatcher.findBestMatch(det.descriptor);
-      if (match.label !== 'unknown') {
-        const stu = students.find(s => s.name === match.label);
-        if (stu) saveAttendance(stu.name, stu.batch);
-      }
-    }, 1300);
-  }
-
-  async function registerFace() {
+  function registerNewStudent() {
     const name = document.getElementById('sName').value.trim();
     const batch = document.getElementById('sBatch').value.trim() || 'Volleyball';
     if (!name) { alert("कृपया खिलाड़ी का नाम लिखें!"); return; }
-    if (!aiLoaded) { alert("AI Engine abhi load ho raha hai, 5 second rukein!"); return; }
-
-    statusEl.innerText = "🔍 Chehra scan ho raha hai, seedha dekhein...";
-    const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if (!det) {
-      alert("Chehra saaf nahi dikha! Thoda roshni mein aakar seedha camera mein dekhein.");
-      statusEl.innerText = "Scan failed. Try again.";
-      return;
-    }
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
-    students.push({ name: name, batch: batch, descriptor: Array.from(det.descriptor) });
-    localStorage.setItem('ccr_students_v9', JSON.stringify(students));
+    students.push({ name: name, batch: batch });
+    localStorage.setItem('ccr_students_v10', JSON.stringify(students));
 
-    rebuildMatcher();
-    refreshUI();
     document.getElementById('sName').value = '';
-    statusEl.innerText = `✅ ${name} ka chehra save ho gaya!`;
+    refreshUI();
+    statusEl.innerText = `✅ ${name} सफलतापूर्वक सेव हो गए!`;
     speak(name + " ka registration pura hua");
     showTab('att');
   }
 
-  function takeStampedSelfie(name, batch, shift) {
+  function deleteStudent(idx) {
+    if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
+      students.splice(idx, 1);
+      localStorage.setItem('ccr_students_v10', JSON.stringify(students));
+      refreshUI();
+    }
+  }
+
+  function markAttendanceWithSelfie() {
+    const name = document.getElementById('attendanceSelect').value;
+    if (!name) { alert("कृपया लिस्ट में से खिलाड़ी का नाम चुनें!"); return; }
+
+    const today = getTodayDate();
+    const currentShift = getCurrentShift();
+
+    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) {
+      alert(name + " ki is " + currentShift + " shift ki hajiri pehle hi lag chuki hai!");
+      return;
+    }
+
+    const student = students.find(s => s.name === name);
+    const batch = student ? student.batch : 'General';
+
     const canvas = document.getElementById('canvas');
     canvas.width = 480; canvas.height = 360;
     const ctx = canvas.getContext('2d');
@@ -275,7 +260,7 @@
     ctx.fillRect(0, canvas.height - 85, canvas.width, 85);
 
     ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px sans-serif";
-    ctx.fillText(ACADEMY_NAME + " [" + shift.toUpperCase() + "]", 12, canvas.height - 60);
+    ctx.fillText(ACADEMY_NAME + " [" + currentShift.toUpperCase() + "]", 12, canvas.height - 60);
     
     ctx.fillStyle = "#38bdf8"; ctx.font = "bold 17px sans-serif";
     ctx.fillText(name + " (" + batch + ")", 12, canvas.height - 36);
@@ -283,43 +268,16 @@
     ctx.fillStyle = "#ffffff"; ctx.font = "13px sans-serif";
     ctx.fillText("Time: " + now, 12, canvas.height - 12);
 
-    return canvas.toDataURL('image/jpeg', 0.75);
-  }
-
-  function saveAttendance(name, batch) {
-    const today = getTodayDate();
-    const currentShift = getCurrentShift();
-
-    if (logs.some(l => l.date === today && l.name === name && getLogShift(l) === currentShift)) return;
-
-    isBusy = true;
+    const photo = canvas.toDataURL('image/jpeg', 0.75);
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const photo = takeStampedSelfie(name, batch, currentShift);
 
     logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
     if (logs.length > 450) logs.pop();
-    localStorage.setItem('ccr_logs_v9', JSON.stringify(logs));
+    localStorage.setItem('ccr_logs_v10', JSON.stringify(logs));
 
     refreshUI();
-    statusEl.innerText = `🎉 PRESENT: ${name} (${timeStr})`;
+    statusEl.innerText = `🎉 ${name} ki hajiri lag gayi!`;
     speak(name + ", aapki hajiri lag gayi hai");
-    setTimeout(() => { isBusy = false; }, 2500);
-  }
-
-  function markManual() {
-    const name = document.getElementById('manualSelect').value;
-    if (!name) return;
-    const stu = students.find(s => s.name === name);
-    if (stu) saveAttendance(stu.name, stu.batch);
-  }
-
-  function deleteStudent(idx) {
-    if (confirm("Kya aap is khiladi ko hatana chahte hain?")) {
-      students.splice(idx, 1);
-      localStorage.setItem('ccr_students_v9', JSON.stringify(students));
-      rebuildMatcher();
-      refreshUI();
-    }
   }
 
   function getFilteredLogs() {
@@ -339,48 +297,78 @@
     const today = getTodayDate();
     const curShift = getCurrentShift();
     const currentShiftLogs = logs.filter(l => l.date === today && getLogShift(l) === curShift);
-    document.getElementById('topCount').innerText = currentShiftLogs.length;
+    const topCnt = document.getElementById('topCount');
+    if(topCnt) topCnt.innerText = currentShiftLogs.length;
 
-    document.getElementById('todayBadges').innerHTML = currentShiftLogs.length === 0 
-      ? '<span style="color:#64748b;font-size:13px;">Aaj is shift mein abhi koi hajiri nahi lagi</span>'
-      : currentShiftLogs.map(l => '<span class="badge">✔ '+l.name+' ('+l.time+')</span>').join('');
+    const badges = document.getElementById('todayBadges');
+    if(badges) {
+      badges.innerHTML = currentShiftLogs.length === 0 
+        ? '<span style="color:#64748b;font-size:13px;">Aaj is shift mein abhi koi hajiri nahi lagi</span>'
+        : currentShiftLogs.map(l => '<span class="badge">✔ '+l.name+' ('+l.time+')</span>').join('');
+    }
 
-    document.getElementById('manualSelect').innerHTML = '<option value="">-- Naam Chunein --</option>' +
-      students.map(s => '<option value="'+s.name+'">'+s.name+' ('+s.batch+')</option>').join('');
+    const sel = document.getElementById('attendanceSelect');
+    if(sel) {
+      sel.innerHTML = students.length === 0 ? '<option value="">-- Pehle Khiladi Jodein --</option>' : '<option value="">-- Naam Chunein --</option>' +
+        students.map(s => '<option value="'+s.name+'">'+s.name+' ('+s.batch+')</option>').join('');
+    }
 
-    document.getElementById('totalStudents').innerText = students.length;
-    document.getElementById('studentList').innerHTML = students.map((s, i) => 
-      '<div class="student-row"><span>👤 <b>'+s.name+'</b> <small style="color:#94a3b8;">('+s.batch+')</small></span><button onclick="deleteStudent('+i+')" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">Hatae</button></div>'
-    ).join('');
+    const totStu = document.getElementById('totalStudents');
+    if(totStu) totStu.innerText = students.length;
+
+    const stuList = document.getElementById('studentList');
+    if(stuList) {
+      stuList.innerHTML = students.map((s, i) => 
+        '<div class="student-row"><span>👤 <b>'+s.name+'</b> <small style="color:#94a3b8;">('+s.batch+')</small></span><button onclick="deleteStudent('+i+')" style="background:#dc2626;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">Hatae</button></div>'
+      ).join('');
+    }
 
     const showLogs = getFilteredLogs();
-    document.getElementById('logsContainer').innerHTML = showLogs.length === 0
-      ? '<div style="color:#94a3b8;text-align:center;padding:15px;">Koi record nahi mila.</div>'
-      : showLogs.map(l => {
-          const sh = getLogShift(l);
-          return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
-        }).join('');
+    const logsContainer = document.getElementById('logsContainer');
+    if(logsContainer) {
+      logsContainer.innerHTML = showLogs.length === 0
+        ? '<div style="color:#94a3b8;text-align:center;padding:15px;">Koi record nahi mila.</div>'
+        : showLogs.map(l => {
+            const sh = getLogShift(l);
+            return '<div class="record-card"><a href="'+l.photo+'" download="CCR_'+l.name+'_'+l.date+'_'+sh+'.jpg"><img src="'+l.photo+'" alt="Selfie"></a><div class="record-info"><strong>'+l.name+'</strong><span>Batch: '+l.batch+' | Shift: <b style="color:#fbbf24;">'+sh+'</b></span><br><span style="color:#94a3b8;">'+l.date+' | '+l.time+'</span></div></div>';
+          }).join('');
+    }
   }
 
   function downloadPhotosPDF() {
     const list = getFilteredLogs();
     if (list.length === 0) { alert("PDF banane ke liye koi record nahi hai!"); return; }
+
     statusEl.innerText = "PDF ban rahi hai... 3 second rukein.";
-    const filterText = document.getElementById('dateFilter').options[document.getElementById('dateFilter').selectedIndex].text;
+    const filterSelect = document.getElementById('dateFilter');
+    const filterText = filterSelect.options[filterSelect.selectedIndex].text;
     const titleDate = getTodayDate();
 
     document.getElementById('pdfSubTitle').innerText = filterText + " | Date: " + titleDate + " | Total Present: " + list.length;
-    document.getElementById('pdfGrid').innerHTML = list.map((l, idx) => `
+
+    const grid = document.getElementById('pdfGrid');
+    grid.innerHTML = list.map((l, idx) => {
+      const sh = getLogShift(l);
+      return `
       <div style="border:1px solid #cbd5e1; border-radius:8px; padding:6px; text-align:center; background:#f8fafc; page-break-inside:avoid;">
         <img src="${l.photo}" style="width:100%; height:135px; object-fit:cover; border-radius:6px; border:1px solid #0284c7;">
-        <div style="font-weight:bold; font-size:12px; color:#0f172a; margin-top:3px;">${idx + 1}. ${l.name} (${getLogShift(l)})</div>
+        <div style="font-weight:bold; font-size:12px; color:#0f172a; margin-top:3px;">${idx + 1}. ${l.name} (${sh})</div>
         <div style="font-size:10px; color:#0284c7; font-weight:bold;">${l.date} | ${l.time}</div>
       </div>
-    `).join('');
+    `}).join('');
 
     const wrapper = document.getElementById('pdfWrapper');
     wrapper.style.display = 'block';
-    html2pdf().set({ margin: 8, filename: 'CCR_Academy_' + titleDate + '.pdf', image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(wrapper).save().then(() => {
+
+    const opt = {
+      margin: 8,
+      filename: 'CCR_Academy_' + titleDate + '_' + getCurrentShift() + '.pdf',
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(wrapper).save().then(() => {
       wrapper.style.display = 'none';
       statusEl.innerText = "✅ PDF Download Successfully!";
     });
@@ -390,7 +378,42 @@
     const list = getFilteredLogs();
     if (list.length === 0) { alert("Download ke liye koi record nahi hai!"); return; }
     let csv = "Academy,Date,Shift,Time,Player Name,Sport Batch\n";
-    list.forEach(l => { csv += '"'+ACADEMY_NAME+'","'+l.date+'","'+getLogShift(l)+'","'+l.time+'","'+l.name+'","'+l.batch+'"\n'; });
+    list.forEach(l => { 
+      const sh = getLogShift(l);
+      csv += '"'+ACADEMY_NAME+'","'+l.date+'","'+sh+'","'+l.time+'","'+l.name+'","'+l.batch+'"\n'; 
+    });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-   
+    link.href = URL.createObjectURL(blob);
+    link.download = 'CCR_Attendance_'+getTodayDate()+'_'+getCurrentShift()+'.csv';
+    link.click();
+  }
+
+  function clearLogs() {
+    if (confirm("Kya aap purana record hatana chahte hain?")) {
+      logs = []; localStorage.setItem('ccr_logs_v10', '[]'); refreshUI();
+    }
+  }
+
+  function showTab(t) {
+    activeTab = t;
+    document.getElementById('t1').classList.toggle('active', t === 'att');
+    document.getElementById('t2').classList.toggle('active', t === 'reg');
+    document.getElementById('t3').classList.toggle('active', t === 'rep');
+    document.getElementById('p-att').classList.toggle('active', t === 'att');
+    document.getElementById('p-reg').classList.toggle('active', t === 'reg');
+    document.getElementById('p-rep').classList.toggle('active', t === 'rep');
+    document.getElementById('camContainer').style.display = (t === 'rep') ? 'none' : 'block';
+  }
+
+  function speak(txt) {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'hi-IN'; window.speechSynthesis.speak(u);
+    }
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
