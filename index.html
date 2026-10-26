@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CCR Sports Academy - Attendance</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
@@ -41,7 +40,7 @@
     <div class="sub-title">Smart Attendance System</div>
     <div id="shiftBanner" class="shift-banner">Checking Shift...</div>
   </div>
-  <div id="status" class="status-bar">⚡ App Initializing...</div>
+  <div id="status" class="status-bar">⚡ Camera Ready!</div>
 
   <div class="nav-tabs">
     <button id="t1" class="tab-btn active" onclick="showTab('att')">📸 Hajiri Lagayein</button>
@@ -120,8 +119,8 @@
 
 <script>
   const ACADEMY_NAME = "CCR SPORTS ACADEMY";
-  let students = JSON.parse(localStorage.getItem('ccr_students_v10') || '[]');
-  let logs = JSON.parse(localStorage.getItem('ccr_logs_v10') || '[]');
+  let students = JSON.parse(localStorage.getItem('ccr_master_students') || '[]');
+  let logs = JSON.parse(localStorage.getItem('ccr_master_logs') || '[]');
   let useFrontCamera = true;
   let currentStream = null;
 
@@ -160,7 +159,6 @@
   async function init() {
     updateShiftBanner();
     setInterval(updateShiftBanner, 30000);
-    
     try {
       statusEl.innerText = "Requesting Camera...";
       await startCamera();
@@ -168,7 +166,6 @@
       statusEl.innerText = students.length === 0 ? "👉 Pehle 'Naya Khiladi Jodein' par click karein." : "✅ Camera Active & Ready!";
     } catch (e) {
       statusEl.innerText = "❌ Camera Error: Please Allow Permission.";
-      console.error(e);
     }
   }
 
@@ -209,7 +206,7 @@
 
     students = students.filter(s => s.name.toLowerCase() !== name.toLowerCase());
     students.push({ name: name, batch: batch });
-    localStorage.setItem('ccr_students_v10', JSON.stringify(students));
+    localStorage.setItem('ccr_master_students', JSON.stringify(students));
 
     document.getElementById('sName').value = '';
     refreshUI();
@@ -221,7 +218,7 @@
   function deleteStudent(idx) {
     if (confirm("क्या आप इस खिलाड़ी को हटाना चाहते हैं?")) {
       students.splice(idx, 1);
-      localStorage.setItem('ccr_students_v10', JSON.stringify(students));
+      localStorage.setItem('ccr_master_students', JSON.stringify(students));
       refreshUI();
     }
   }
@@ -272,8 +269,8 @@
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     logs.unshift({ date: today, shift: currentShift, time: timeStr, name: name, batch: batch, photo: photo });
-    if (logs.length > 450) logs.pop();
-    localStorage.setItem('ccr_logs_v10', JSON.stringify(logs));
+    if (logs.length > 500) logs.pop();
+    localStorage.setItem('ccr_master_logs', JSON.stringify(logs));
 
     refreshUI();
     statusEl.innerText = `🎉 ${name} ki hajiri lag gayi!`;
@@ -297,6 +294,7 @@
     const today = getTodayDate();
     const curShift = getCurrentShift();
     const currentShiftLogs = logs.filter(l => l.date === today && getLogShift(l) === curShift);
+    
     const topCnt = document.getElementById('topCount');
     if(topCnt) topCnt.innerText = currentShiftLogs.length;
 
@@ -391,7 +389,7 @@
 
   function clearLogs() {
     if (confirm("Kya aap purana record hatana chahte hain?")) {
-      logs = []; localStorage.setItem('ccr_logs_v10', '[]'); refreshUI();
+      logs = []; localStorage.setItem('ccr_master_logs', '[]'); refreshUI();
     }
   }
 
