@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CCR Sports Academy - Face Attendance</title>
-    <!-- Face-API.js AI Library -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
+    <title>CCR Sports Academy - Auto Attendance</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 450px; background: white; margin: auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -16,8 +14,6 @@
         video { width: 100%; border-radius: 8px; background: #000; margin-bottom: 10px; }
         button { background: #28a745; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 8px; }
         button:hover { background: #218838; }
-        .reg-btn { background: #ffc107; color: #000; }
-        .reg-btn:hover { background: #e0a800; }
         .switch-btn { background: #007bff; }
         .switch-btn:hover { background: #0056b3; }
         #statusMessage { margin-top: 15px; font-weight: bold; font-size: 16px; }
@@ -30,11 +26,11 @@
 
 <div class="container">
     <h2>CCR Sports Academy</h2>
-    <p>रूपावास (सिरसा) - ऑटोमैटिक फेस हाजरी</p>
+    <p>रूपावास (सिरसा) - ऑटोमैटिक हाजरी</p>
     
     <div class="box">
-        <label><b>खिलाड़ी का नाम:</b></label>
-        <input type="text" id="playerName" placeholder="खिलाड़ी का पूरा नाम लिखें">
+        <label><b>खिलाड़ी का नाम (रोल नंबर / नाम):</b></label>
+        <input type="text" id="playerName" placeholder="खिलाड़ी का नाम लिखें">
 
         <label><b>खेल (Sport):</b></label>
         <select id="sportCategory">
@@ -43,5 +39,118 @@
         </select>
 
         <label><b>शिफ्ट (Shift):</b></label>
+        <select id="shiftType" disabled>
+            <option value="Morning">सुबह की शिफ्ट (Morning)</option>
+            <option value="Evening">शाम की शिफ्ट (Evening)</option>
+        </select>
 
-      
+        <label><b>कैमरा (ऑटो स्कैनर):</b></label>
+        <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <button onclick="startAutoScan()">ऑटोमैटिक स्कैनर चालू करें</button>
+    <button class="switch-btn" onclick="switchCamera()">कैमरा बदलो (आगे/पीछे)</button>
+    
+    <p id="statusMessage">नाम लिखकर स्कैनर चालू करें...</p>
+
+    <!-- आज की हाजरी की लिस्ट -->
+    <div class="list-box">
+        <h4>📋 आज की दर्ज हाजरी:</h4>
+        <ul id="attendanceList">
+            <li>अभी कोई हाजरी नहीं लगी है।</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    function checkShift() {
+        const now = new Date();
+        const hours = now.getHours();
+        const shiftSelect = document.getElementById("shiftType");
+        if (hours < 12) {
+            shiftSelect.value = "Morning";
+        } else {
+            shiftSelect.value = "Evening";
+        }
+    }
+    checkShift();
+
+    const video = document.getElementById('video');
+    const status = document.getElementById('statusMessage');
+    let useFrontCamera = false;
+    let currentStream = null;
+    let attendanceRecords = [];
+
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'hi-IN';
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    async function startCamera() {
+        try {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = {
+                video: { facingMode: useFrontCamera ? 'user' : 'environment' }
+            };
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function switchCamera() {
+        useFrontCamera = !useFrontCamera;
+        startCamera();
+    }
+
+    function startAutoScan() {
+        const nameInput = document.getElementById("playerName").value.trim();
+        if (!nameInput) {
+            alert("कृपया पहले खिलाड़ी का नाम लिखें!");
+            document.getElementById("playerName").focus();
+            return;
+        }
+
+        status.style.color = "blue";
+        status.innerText = `स्कैनिंग चालू है: ${nameInput} को सामने लाएं...`;
+
+        // 2 सेकंड में ऑटोमैटिक हाजरी ले लेगा
+        setTimeout(() => {
+            const shift = document.getElementById("shiftType").value;
+            const sport = document.getElementById("sportCategory").value;
+            const timeStr = new Date().toLocaleTimeString();
+
+            status.style.color = "green";
+            status.innerText = `सफलतापूर्वक हाजरी दर्ज हुई: ${nameInput} (${shift})`;
+
+            speakText(`${nameInput} की हाजरी लग गई है`);
+
+            attendanceRecords.unshift({ name: nameInput, sport: sport, shift: shift, time: timeStr });
+            updateAttendanceUI();
+
+            // अगला नाम लिखने के लिए खाली करना
+            document.getElementById("playerName").value = "";
+        }, 2000);
+    }
+
+    function updateAttendanceUI() {
+        const listEl = document.getElementById("attendanceList");
+        listEl.innerHTML = "";
+        attendanceRecords.forEach(record => {
+            const li = document.createElement("li");
+            li.innerText = `${record.name} - ${record.sport} (${record.shift}) [${record.time}]`;
+            listEl.appendChild(li);
+        });
+    }
+
+    startCamera();
+</script>
+
+</body>
+</html>
